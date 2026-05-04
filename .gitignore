@@ -1,0 +1,17 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+
+.venv/
+.ipynb_checkpoints/
+
+# TeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# Exploratory long-batch outputs are resumable but not part of the final claims.
+results/long_batch/
+

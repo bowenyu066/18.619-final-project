@@ -1,0 +1,4 @@
+n,d,seed,edges,brute_force_alpha,ip_alpha,ip_status,matches_bruteforce
+12,3.0,101,16,6,6,Optimal,True
+14,4.0,102,33,5,5,Optimal,True
+16,5.0,103,38,7,7,Optimal,True

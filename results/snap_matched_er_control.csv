@@ -1,0 +1,2 @@
+graph,n,m,d,seed,random_greedy_mean,random_greedy_std,random_greedy_best,min_degree_greedy,ip_feasible,ip_status,ip_mis_upper_bound,ip_elapsed_seconds,logd_over_d_n,log1pd_over_d_n,first_moment_n,two_logd_over_d_n
+matched ER for ca-GrQc,5242,14782,5.526135062953071,18619,1763.15,19.260745462974004,1803,2115,2115,TimeLimit,2605.0,32.06897550000002,1621.5925765976453,1779.3668744600432,2625.5091354812803,3243.1851531952907

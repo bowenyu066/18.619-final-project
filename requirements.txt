@@ -1,0 +1,8 @@
+numpy
+pandas
+matplotlib
+pulp
+nbformat
+nbclient
+ipykernel
+tecto

@@ -1,0 +1,395 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,booktabs,graphicx,hyperref}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{float}
+
+\newcommand{\ER}{G(n,d/n)}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\whp}{\text{w.h.p.}}
+\newcommand{\dd}{\,\mathrm{d}}
+
+\title{Integer Programming for Large Independent Sets in Sparse Random and Real Networks}
+\author{}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study the maximum independent set problem on sparse Erdős--Rényi graphs
+$G(n,d/n)$ and on the SNAP ca-GrQc collaboration network.  Beyond reporting
+the size of the independent set returned by an integer program, we pay close
+attention to the gap between an incumbent solution and a certified optimum.
+For $d=20$, random-order greedy tracks the $\log(d)n/d$ scale closely, whereas
+minimum-degree greedy and IP warm starts recover noticeably larger independent
+sets.  Across the random instances we tested, CBC certifies optimality only at
+the smallest size, but the incumbent stays comfortably above the greedy scale
+at every $n$.  On ca-GrQc, decomposing the graph by connected component brings
+the exact IP within reach and yields $\alpha(G)=2459$.
+\end{abstract}
+
+\section{Problem and Formulation}
+
+For a graph $G=(V,E)$, an independent set is a subset $S\subseteq V$ containing
+no adjacent pair.  The independence number is
+\[
+\alpha(G)=\max\{|S|: S\subseteq V,\; S\text{ independent}\}.
+\]
+The binary IP formulation introduces $x_v\in\{0,1\}$ for each vertex and solves
+\[
+\begin{aligned}
+\max \quad & \sum_{v\in V}x_v\\
+\text{s.t.}\quad & x_u+x_v\le 1, && (u,v)\in E,\\
+& x_v\in\{0,1\}, && v\in V.
+\end{aligned}
+\]
+These edge constraints are tight in the sense that any feasible binary vector
+corresponds exactly to an independent set.
+
+In practice we solve the equivalent minimum vertex-cover model.  Setting
+$y_v=1-x_v$,
+\[
+\begin{aligned}
+\min \quad & \sum_{v\in V}y_v\\
+\text{s.t.}\quad & y_u+y_v\ge 1, && (u,v)\in E,\\
+& y_v\in\{0,1\}, && v\in V,
+\end{aligned}
+\]
+and therefore
+\[
+\alpha(G)=|V|-\tau(G),
+\]
+where $\tau(G)$ is the minimum vertex-cover value.  We found CBC noticeably
+more stable on the cover form once warm starts were enabled.  When CBC stops
+before proving optimality, we report the bracket
+\[
+\alpha(G)\in [L,U],
+\]
+where $L$ is the incumbent independent set size and $U$ is the converted IP
+upper bound.
+
+\section{Random-Graph Benchmarks}
+
+The project prompt motivates a classical comparison on sparse random graphs:
+\[
+\alpha(G(n,d/n))\sim \frac{2\log d}{d}n
+\]
+in the double limit $n\to\infty$ followed by $d\to\infty$, while a range of
+simple greedy algorithms only reach sets of order $(\log d/d)n$ \cite{coja2015}.
+
+\subsection{Greedy scale}
+
+Random-order greedy gives a clean finite-$d$ heuristic.  Process the vertices
+in a uniformly random order and accept each one whose neighborhood has not
+already supplied an accepted vertex.  Let $s(t)$ be the accepted fraction after
+a fraction $t$ of the vertices have been exposed.  In $G(n,d/n)$, a local
+mean-field estimate gives
+\[
+\frac{\dd s}{\dd t}=\exp(-d s(t)),\qquad s(0)=0,
+\]
+since a fresh vertex is accepted exactly when none of its edges lands in the
+already-accepted set, which has size roughly $s(t)n$.  Integrating yields
+\[
+s(t)=\frac{\log(1+dt)}{d},
+\qquad
+s(1)=\frac{\log(1+d)}{d}.
+\]
+For $d=20$ this evaluates to $0.1522$, essentially indistinguishable from
+$\log(20)/20=0.1498$.  Wormald's differential-equation method is the standard
+way to make this kind of mean-field approximation rigorous \cite{wormald1995}.
+
+\subsection{First-moment upper benchmark}
+
+The asymptotic value $2\log(d)/d$ is not very accurate numerically at $d=20$,
+and a finite-$d$ first-moment bound gives a much sharper reference scale.  For
+$k=an$,
+\[
+\E N_k
+=
+\binom{n}{k}(1-d/n)^{\binom{k}{2}},
+\]
+where $N_k$ is the number of independent sets of size $k$.  Stirling's formula
+gives
+\[
+\frac{1}{n}\log \E N_{an}
+=
+H(a)-\frac{d a^2}{2}+o(1),
+\]
+where
+\[
+H(a)=-a\log a-(1-a)\log(1-a).
+\]
+Whenever $H(a)-d a^2/2<0$, Markov's inequality rules out independent sets of
+size $an$ with high probability, so the largest positive root of
+\[
+H(a)-\frac{d a^2}{2}=0
+\]
+serves as a finite-$d$ upper benchmark.  At $d=20$ this root is
+\[
+a_{\mathrm{FM}}=0.232996,
+\]
+which makes clear that $2\log(20)/20=0.2996$ is best read as a large-$d$
+asymptotic rather than a tight prediction at moderate $d$.
+
+\section{Computational Design}
+
+We compare three methods throughout.
+\begin{itemize}[leftmargin=*]
+\item \textbf{Random-order greedy:} 20 random permutations in the notebook
+run, and 100 in the long-batch runner.
+\item \textbf{Minimum-degree greedy:} repeatedly accept a vertex of current
+minimum degree and remove it together with its neighbors.
+\item \textbf{IP/CBC:} solve the binary model in PuLP 3.3.0 with CBC 2.10.3,
+warm-started from the best greedy solution available.
+\end{itemize}
+In the independent-set variables, every clique $C$ supplies the valid
+inequality
+\[
+\sum_{v\in C}x_v\le 1,
+\]
+since at most one vertex of a clique can be picked.  Because we run the
+vertex-cover model with $y_v=1-x_v$, triangle and 4-clique cuts enter in the
+equivalent form
+\[
+\sum_{v\in C}y_v\ge |C|-1.
+\]
+We dropped these cuts on the real collaboration network: the graph already
+carries many coauthorship cliques, and the bare edge formulation was effective
+enough once the components had been split off.
+
+Every returned set is checked directly against the edge list, and small
+validation instances are additionally solved by exhaustive search; CBC matched
+brute force on all three validation graphs,
+\[
+(n,d,\alpha)=(12,3,6),\quad (14,4,5),\quad (16,5,7).
+\]
+
+All experiments were run on an Apple M3 Pro with 18 GB RAM, Python 3.9.6,
+PuLP 3.3.0, and CBC 2.10.3.  A resumable long-batch script accompanies the
+notebook for the full grid; it writes one CSV row per instance and picks up
+without overwriting completed runs.
+
+\section{Sparse Random Graph Results}
+
+Table \ref{tab:er-short} reports the completed notebook grid for $d=20$.  The
+IP time limit was 30 seconds at $n=100$, 20 seconds for
+$200\le n\le 2000$, and 60 seconds at $n=3000$.
+
+\begin{table}[h]
+\centering
+\caption{Sparse random graph results for $G(n,20/n)$.  Here $W$ is the
+warm-start size, $L$ is the IP incumbent, $\Delta=L-W$, and $U$ is the integer
+upper bound $\lfloor U_{\mathrm{CBC}}\rfloor$ on $\alpha(G)$.}
+\label{tab:er-short}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{rrrrrrrrrlrr}
+\toprule
+$n$ & edges & rand. mean & rand. best & min-deg & $W$ & $L$ & $\Delta$ &
+status & $U$ & $(\log d/d)n$ & FM \\
+\midrule
+100  & 1023  & 13.70  & 17  & 18  & 18  & 20  & 2 & Optimal   & 20   & 14.98 & 23.30 \\
+200  & 2068  & 29.20  & 33  & 37  & 37  & 37  & 0 & TimeLimit & 59   & 29.96 & 46.60 \\
+500  & 5025  & 75.15  & 79  & 95  & 95  & 95  & 0 & TimeLimit & 166  & 74.89 & 116.50 \\
+1000 & 10029 & 152.35 & 159 & 198 & 198 & 198 & 0 & TimeLimit & 354  & 149.79 & 233.00 \\
+2000 & 19862 & 304.45 & 313 & 384 & 384 & 384 & 0 & TimeLimit & 785  & 299.57 & 465.99 \\
+3000 & 30150 & 454.45 & 475 & 584 & 584 & 584 & 0 & TimeLimit & 1216 & 449.36 & 698.99 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.94\linewidth]{results/figure1_er_ratios.pdf}
+\caption{Independent set densities in $G(n,20/n)$.  Random-order greedy
+tracks the $\log(1+d)/d$ prediction; the IP incumbent follows the stronger
+minimum-degree warm start and remains below the first-moment benchmark.}
+\label{fig:er-ratios}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.82\linewidth]{results/figure2_er_certificate_gap.pdf}
+\caption{Certificate gap $(U-L)/n$ for the sparse random graph IP runs.  The
+open marker at $n=100$ denotes a certified optimum; larger instances have
+incumbents above the greedy threshold but no exact proof within the short
+time limit.}
+\label{fig:er-gap}
+\end{figure}
+
+The random-order greedy mean sits almost exactly on the $\log(1+d)/d$ scale.
+At $n=3000$, for example, the mean is $454.45$ against a prediction of
+$(\log(1+d)/d)n=456.68$.  Warm-started by minimum-degree greedy, the IP
+pipeline produces feasible independent sets above the random-order greedy
+scale on every random instance we tried.  In the short-grid runs, though,
+CBC only manages to improve on the warm start at $n=100$; for larger $n$,
+finding a feasible set is no longer the bottleneck---certifying it is.
+
+\section{SNAP ca-GrQc}
+
+Our real-network instance is the SNAP ca-GrQc collaboration graph
+\cite{leskovec2007snap}, which records coauthorship in the arXiv General
+Relativity and Quantum Cosmology category; a paper with $k$ authors contributes
+a $k$-clique to the graph \cite{snapca}.  After symmetrizing duplicate directed
+rows, dropping self-loops, and keeping loop-only vertices as isolated nodes,
+the simple graph has
+\[
+n=5242,\qquad m=14484,\qquad \bar d=5.526.
+\]
+It splits into 355 connected components, the largest of which has 4158
+vertices.  Since the independence number is additive over components, we
+solve the IP one component at a time.
+
+\begin{table}[h]
+\centering
+\caption{SNAP ca-GrQc independent set results.}
+\label{tab:snap}
+\begin{tabular}{lr}
+\toprule
+quantity & value \\
+\midrule
+random greedy mean, 20 runs & 2179.20 \\
+random greedy standard deviation & 15.17 \\
+random greedy best, 20 runs & 2202 \\
+minimum-degree greedy & 2458 \\
+IP optimum & 2459 \\
+IP status & Optimal \\
+total IP time & 35.1 seconds \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.94\linewidth]{results/figure3_snap_comparison.pdf}
+\caption{SNAP ca-GrQc compared with random-graph benchmarks using the observed
+average degree $\bar d=2m/n$.}
+\label{fig:snap-bars}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.94\linewidth]{results/figure4_snap_component_profile.pdf}
+\caption{Component-level profile for ca-GrQc.  The largest component is the
+single most expensive subproblem, while many small components contribute small
+per-component overhead and often have high independent-set density.}
+\label{fig:snap-components}
+\end{figure}
+
+The certified value is
+\[
+\alpha(G_{\mathrm{ca\text{-}GrQc}})=2459,
+\]
+and minimum-degree greedy misses it by a single vertex.  Plugging the observed
+degree $\bar d$ into an Erdős--Rényi null model gives
+\[
+\frac{\log \bar d}{\bar d}n=1621.6,\qquad
+\frac{\log(1+\bar d)}{\bar d}n=1779.4,
+\]
+\[
+a_{\mathrm{FM}}n=2625.5,\qquad
+\frac{2\log \bar d}{\bar d}n=3243.2.
+\]
+The true optimum lands between the greedy-scale predictions and the finite-$d$
+first-moment benchmark.  This is only a null comparison, of course: ca-GrQc
+has high clustering, many coauthorship cliques, disconnected structure, and a
+heterogeneous degree distribution, none of which $G(n,d/n)$ captures.
+
+\begin{table}[h]
+\centering
+\caption{ca-GrQc and a matched Erdős--Rényi null model generated with the same $n$ and
+expected average degree $\bar d$.}
+\label{tab:matched}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrrrlr}
+\toprule
+graph & $n$ & $m$ & comps. & rand. mean & min-deg & $L$ & $U$ & status & time \\
+\midrule
+ca-GrQc & 5242 & 14484 & 355 & 2179.20 & 2458 & 2459 & 2459 & Optimal & 35.1s \\
+matched ER & 5242 & 14782 & -- & 1763.15 & 2115 & 2115 & 2605 & TimeLimit & 32.1s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A matched Erdős--Rényi graph with $p=\bar d/n$ provides a cleaner null
+comparison.  On this control, CBC times out at 30 seconds with incumbent 2115
+and integer upper bound 2605, while the real ca-GrQc instance is solved
+exactly by component decomposition.  The real graph both admits a larger
+independent set and is easier to certify than the matched ER control, mostly
+because of its component structure and the geometry typical of collaboration
+networks.
+
+\section{Discussion}
+
+The finite-$d$ picture differs visibly from the leading large-$d$ formula.
+At $d=20$, the first-moment threshold sits near $0.233n$, well below
+$2\log(d)n/d\approx 0.300n$.  Our IP incumbents on the short grid lie above
+random-order greedy but still under this finite-$d$ upper benchmark, which is
+the qualitative regime one expects.
+
+The bottleneck is certification, not feasibility.  The minimum-degree warm
+start almost always hands the IP a strong feasible solution immediately, but
+CBC has a much harder time closing the upper-bound side of the certificate.
+Put in branch-and-bound terms, the primal improves far more quickly than the
+dual---this is the main algorithmic takeaway from the sparse random instances.
+
+The real-network instance tells a different story.  Its 355 components
+turn what would be a single 5242-node solve into many far smaller subproblems,
+and the underlying coauthorship structure pushes minimum-degree greedy to
+within one vertex of optimal.  In this regime the random-graph formulas serve
+as baselines rather than predictions.
+
+\section{Conclusion}
+
+For $G(n,20/n)$, the warm-started IP pipeline reliably returns independent
+sets beyond the random-order greedy scale.  Within the completed notebook
+grid, exact certification only goes through at $n=100$; the larger instances
+hit their time limits with nontrivial certificate gaps.  On the SNAP ca-GrQc
+network, the same IP formulation, applied component by component, certifies
+$\alpha(G)=2459$.
+
+For broader experiments, the notebook ships with a resumable long-batch
+runner that supports multi-seed extensions; the conclusions above are drawn
+from the completed short-grid, matched-ER, and SNAP runs.
+
+\begin{thebibliography}{9}
+
+\bibitem{erdosrenyi1959}
+P. Erdős and A. Rényi.
+\newblock On random graphs. I.
+\newblock \emph{Publicationes Mathematicae}, 6:290--297, 1959.
+
+\bibitem{coja2015}
+A. Coja-Oghlan and C. Efthymiou.
+\newblock On independent sets in random graphs.
+\newblock \emph{Random Structures \& Algorithms}, 47:436--486, 2015.
+
+\bibitem{wormald1995}
+N. C. Wormald.
+\newblock Differential equations for random processes and random graphs.
+\newblock \emph{Annals of Applied Probability}, 5(4):1217--1235, 1995.
+
+\bibitem{forrestcbc}
+J. Forrest and the CBC team.
+\newblock CBC User Guide.
+\newblock COIN-OR Branch-and-Cut solver documentation,
+\url{https://www.coin-or.org/Cbc/cbcuserguide.html}.
+
+\bibitem{leskovec2007snap}
+J. Leskovec, J. Kleinberg, and C. Faloutsos.
+\newblock Graph evolution: Densification and shrinking diameters.
+\newblock \emph{ACM Transactions on Knowledge Discovery from Data}, 1(1):2,
+2007.
+
+\bibitem{snapca}
+Stanford Network Analysis Project.
+\newblock General Relativity and Quantum Cosmology collaboration network.
+\newblock \url{https://snap.stanford.edu/data/ca-GrQc.html}.
+
+\end{thebibliography}
+
+\end{document}
