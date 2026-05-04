@@ -4,9 +4,9 @@ Computational final project for 6.265/15.070/18.619, Spring 2026.
 
 This project studies maximum independent sets in sparse Erdős-Rényi graphs
 `G(n,d/n)` and in the SNAP ca-GrQc collaboration network. The notebook compares
-random-order greedy, minimum-degree greedy, and a warm-started CBC integer
-program, with careful separation between feasible incumbents and certified
-optima.
+*random-order greedy*, *minimum-degree greedy*, and *a warm-started CBC integer
+program*, together with careful separation between *feasible incumbents* and *certified
+optima*.
 
 ## Main Results
 
