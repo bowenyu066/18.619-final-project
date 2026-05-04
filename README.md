@@ -21,6 +21,29 @@ optima*.
 - A matched Erdős-Rényi control with the same `n` and expected average degree is
   harder to certify under the same short time limit.
 
+## Figures
+
+**Sparse random graphs.** Independent set densities for `G(n,20/n)` compared
+with the finite-`d` greedy scale, first-moment benchmark, and large-`d`
+asymptotic reference.
+
+![Independent set densities for sparse ER graphs](results/figure1_er_ratios.png)
+
+**Certification gap.** CBC returns strong feasible incumbents after warm starts,
+but the upper-bound certificate remains loose on larger random instances.
+
+![IP certificate gap for sparse ER graphs](results/figure2_er_certificate_gap.png)
+
+**Real network comparison.** ca-GrQc is compared against random-graph
+benchmarks using the observed average degree.
+
+![SNAP ca-GrQc comparison](results/figure3_snap_comparison.png)
+
+**Component profile.** Component decomposition is what makes the ca-GrQc exact
+solve tractable.
+
+![SNAP component profile](results/figure4_snap_component_profile.png)
+
 ## Files
 
 - `final_project_1.ipynb` - self-contained executable notebook.
