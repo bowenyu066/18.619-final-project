@@ -1,9 +1,20 @@
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
-\usepackage{amsmath,amssymb,amsthm,booktabs,graphicx,hyperref}
-\usepackage{enumitem}
-\usepackage{caption}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
 \usepackage{float}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+\graphicspath{{revised_report_assets/}{/mnt/data/revised_report_assets/}}
 
 \newcommand{\ER}{G(n,d/n)}
 \newcommand{\E}{\mathbb{E}}
@@ -11,16 +22,16 @@
 \newcommand{\whp}{\text{w.h.p.}}
 \newcommand{\dd}{\,\mathrm{d}}
 
-\title{Integer Programming for Large Independent Sets in Sparse Random and Real Networks}
-\author{}
-\date{\today}
+\title{Integer Programming for Large Independent Sets\\in Sparse Random and Real Networks}
+\author{Keming Miao, Ziqian (Alice) Xiao, Bowen Yu}
+\date{May 2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
 We study the maximum independent set problem on sparse Erdős--Rényi graphs
-$G(n,d/n)$ and on the SNAP ca-GrQc collaboration network.  Beyond reporting
+$G(n,d/n)$ and on the SNAP ca-GrQc collaboration network.  Apart from reporting
 the size of the independent set returned by an integer program, we pay close
 attention to the gap between an incumbent solution and a certified optimum.
 For $d=20$, random-order greedy tracks the $\log(d)n/d$ scale closely, whereas
@@ -73,7 +84,7 @@ upper bound.
 
 \section{Random-Graph Benchmarks}
 
-The project prompt motivates a classical comparison on sparse random graphs:
+A classical comparison on sparse random graphs gives the following result, as indicated by our current project guidance:
 \[
 \alpha(G(n,d/n))\sim \frac{2\log d}{d}n
 \]
@@ -107,14 +118,14 @@ The asymptotic value $2\log(d)/d$ is not very accurate numerically at $d=20$,
 and a finite-$d$ first-moment bound gives a much sharper reference scale.  For
 $k=an$,
 \[
-\E N_k
+\E [N_k]
 =
 \binom{n}{k}(1-d/n)^{\binom{k}{2}},
 \]
 where $N_k$ is the number of independent sets of size $k$.  Stirling's formula
 gives
 \[
-\frac{1}{n}\log \E N_{an}
+\frac{1}{n}\log \E [N_{an}]
 =
 H(a)-\frac{d a^2}{2}+o(1),
 \]
@@ -156,7 +167,7 @@ equivalent form
 \[
 \sum_{v\in C}y_v\ge |C|-1.
 \]
-We dropped these cuts on the real collaboration network: the graph already
+We dropped these cuts on the real collaboration network, because the graph already
 carries many coauthorship cliques, and the bare edge formulation was effective
 enough once the components had been split off.
 
@@ -169,8 +180,8 @@ brute force on all three validation graphs,
 
 All experiments were run on an Apple M3 Pro with 18 GB RAM, Python 3.9.6,
 PuLP 3.3.0, and CBC 2.10.3.  A resumable long-batch script accompanies the
-notebook for the full grid; it writes one CSV row per instance and picks up
-without overwriting completed runs.
+notebook for the full grid, where it writes one CSV row per instance and picks up
+without overwriting completed runs. All the implemented code and notebook can be found at \cite{code}.
 
 \section{Sparse Random Graph Results}
 
@@ -331,13 +342,13 @@ $2\log(d)n/d\approx 0.300n$.  Our IP incumbents on the short grid lie above
 random-order greedy but still under this finite-$d$ upper benchmark, which is
 the qualitative regime one expects.
 
-The bottleneck is certification, not feasibility.  The minimum-degree warm
+The bottleneck is certification, but not feasibility. The minimum-degree warm
 start almost always hands the IP a strong feasible solution immediately, but
 CBC has a much harder time closing the upper-bound side of the certificate.
 Put in branch-and-bound terms, the primal improves far more quickly than the
 dual---this is the main algorithmic takeaway from the sparse random instances.
 
-The real-network instance tells a different story.  Its 355 components
+A totally different story was told by the real-network instance, where its 355 components
 turn what would be a single 5242-node solve into many far smaller subproblems,
 and the underlying coauthorship structure pushes minimum-degree greedy to
 within one vertex of optimal.  In this regime the random-graph formulas serve
@@ -389,6 +400,10 @@ J. Leskovec, J. Kleinberg, and C. Faloutsos.
 Stanford Network Analysis Project.
 \newblock General Relativity and Quantum Cosmology collaboration network.
 \newblock \url{https://snap.stanford.edu/data/ca-GrQc.html}.
+
+\bibitem{code}
+B. Yu, K. Miao, A. Xiao.
+\newblock \url{https://github.com/bowenyu066/18.619-final-project}
 
 \end{thebibliography}
 
